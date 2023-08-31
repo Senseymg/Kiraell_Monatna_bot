@@ -94,7 +94,7 @@ public class ExchangeRatesBot extends TelegramLongPollingBot {
                                 
                 /eur - курс евро
                           
-                /picture картинка=)                
+                /picture случайная картинка из библиотеки       
                                 
                 Дополнительные команды:
                 /help - получение справки
@@ -145,7 +145,7 @@ public class ExchangeRatesBot extends TelegramLongPollingBot {
                  
                  /eur - курс евро
                  
-                 /photo картинка=)    
+                 /photo случайная картинка из библиотеки        
                  """;
         sendMessage(chatId, text);
     }
@@ -157,18 +157,16 @@ public class ExchangeRatesBot extends TelegramLongPollingBot {
     }
 
     private void sendPicture(Long chatId, String name) {
-
-        randomizer.getRandomFileUrl(folderUrlCollector.getFolderUrls(picturesPath));
         System.out.println(name);
         System.out.println(imgPath);
-        String caption = "Dzirrt";
+        String secondPartOfUrl =randomizer.getRandomFileUrl(folderUrlCollector.getFolderUrls(picturesPath));
+
         SendPhoto sendPhoto = SendPhoto.builder()
                 .chatId(chatId)
-                .caption(caption)
+                //.caption(secondPartOfUrl) просто название картинки не является необходимым
                 .parseMode(ParseMode.HTML)
-                .photo(new InputFile(new File(imgPath))).build();
+                .photo(new InputFile(new File(picturesPath+"//"+secondPartOfUrl))).build();// из рандомайзера берём часть которую добавляем к пути
         try {
-
             execute(sendPhoto);
         } catch (TelegramApiException e) {
             throw new RuntimeException(e);

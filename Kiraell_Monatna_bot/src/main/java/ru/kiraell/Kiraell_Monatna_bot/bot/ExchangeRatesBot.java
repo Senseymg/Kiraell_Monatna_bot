@@ -10,14 +10,17 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.ParseMode;
+import org.telegram.telegrambots.meta.api.methods.send.SendAudio;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.methods.send.SendPhoto;
-
 import org.telegram.telegrambots.meta.api.objects.InputFile;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
+
+import ru.kiraell.Kiraell_Monatna_bot.bot.commands.ExcRatesBotCommands;
 import ru.kiraell.Kiraell_Monatna_bot.exception.ServiceException;
 import ru.kiraell.Kiraell_Monatna_bot.service.ExchangeRatesService;
 import ru.kiraell.Kiraell_Monatna_bot.service.FolderUrlCollector;
@@ -46,12 +49,15 @@ public class ExchangeRatesBot extends TelegramLongPollingBot {
     private static final String EUR = "/eur";
     private static final String HELP = "/help";
     private static final String PICTURE = "/photo";
+    private static final String MUSIC = "/music";
     @Autowired
     private ExchangeRatesService exchangeRatesService;
     @Autowired
     private FolderUrlCollector folderUrlCollector;
     @Autowired
     private Randomizer randomizer;
+    @Autowired
+    ExcRatesBotCommands excRatesBotCommands;
 
     public ExchangeRatesBot(@Value("${bot.token}") String botToken) {
         super(botToken);
@@ -70,11 +76,13 @@ public class ExchangeRatesBot extends TelegramLongPollingBot {
                 String userName = update.getMessage().getChat().getUserName();
                 startCommand(chatId, userName);
             }
+            case MUSIC -> sendMusic(chatId,nameOfUser);
             case PICTURE -> sendPicture(chatId, nameOfUser);
             case USD -> usdCommand(chatId);
             case EUR -> eurCommand(chatId);
             case HELP -> helpCommand(chatId);
             default -> unknownCommand(chatId);
+
         }
     }
 
@@ -95,6 +103,8 @@ public class ExchangeRatesBot extends TelegramLongPollingBot {
                 /eur - курс евро
                           
                 /picture случайная картинка из библиотеки       
+                
+                /music случайная композиция
                                 
                 Дополнительные команды:
                 /help - получение справки
@@ -145,7 +155,10 @@ public class ExchangeRatesBot extends TelegramLongPollingBot {
                  
                  /eur - курс евро
                  
-                 /photo случайная картинка из библиотеки        
+                 /photo случайная картинка из библиотеки     
+                 
+                 /music случайная композиция
+                    
                  """;
         sendMessage(chatId, text);
     }
@@ -170,6 +183,20 @@ public class ExchangeRatesBot extends TelegramLongPollingBot {
             execute(sendPhoto);
         } catch (TelegramApiException e) {
             throw new RuntimeException(e);
+        }
+    }
+    private void sendMusic(Long chatId, String name){
+
+        String secondPartOfUrl =randomizer.getRandomFileUrl(folderUrlCollector.getFolderUrls(musicPath));
+        SendAudio sendAudio=new SendAudio();
+        sendAudio.setAudio(new InputFile(new File(musicPath+"//"+secondPartOfUrl)));
+        sendAudio.setChatId(chatId);
+        sendAudio.setCaption(name+" Держи песенку");
+
+        try {
+            execute(sendAudio);
+        } catch (TelegramApiException e) {
+            LOG.error("Ошибка отправки Аудио", e);
         }
     }
 

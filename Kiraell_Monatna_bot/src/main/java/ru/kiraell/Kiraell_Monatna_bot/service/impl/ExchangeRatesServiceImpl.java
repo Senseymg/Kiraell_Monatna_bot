@@ -15,6 +15,7 @@ import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
 import java.io.StringReader;
+
 import ru.kiraell.Kiraell_Monatna_bot.client.CbrClient;
 import ru.kiraell.Kiraell_Monatna_bot.exception.ServiceException;
 import ru.kiraell.Kiraell_Monatna_bot.service.ExchangeRatesService;
@@ -25,6 +26,7 @@ import ru.kiraell.Kiraell_Monatna_bot.service.ExchangeRatesService;
 public class ExchangeRatesServiceImpl implements ExchangeRatesService {
     // так как известен формат XML  файла который получаем с катировками мы можем
     // достать значение по ключам ккоторые указаны ниже
+    private static final Logger LOG = LoggerFactory.getLogger(ExchangeRatesServiceImpl.class);
     private static final String USD_XPATH = "/ValCurs//Valute[@ID='R01235']/Value"; // ключи по которым будем
     // искать значение для евро и доллара
     private static final String EUR_XPATH = "/ValCurs//Valute[@ID='R01239']/Value";
@@ -32,18 +34,20 @@ public class ExchangeRatesServiceImpl implements ExchangeRatesService {
     @Autowired
     private CbrClient client;  // инжектим ЦБРКлиент чтобы можно было получать таблицу с котировками
 
+    @Cacheable(value = "usd", unless = "#result == null or #result.isEmpty()")
     @Override
     public String getUSDExchangeRate() throws ServiceException {
-        var xmlOptional= client.getCurrencyRatesXML();
-        String xml = xmlOptional.orElseThrow( ()->new ServiceException(" Не удалось получить XML"));
-        return extractCurrencyFromXML(xml,USD_XPATH);
+        var xmlOptional = client.getCurrencyRatesXML();
+        String xml = xmlOptional.orElseThrow(() -> new ServiceException(" Не удалось получить XML"));
+        return extractCurrencyFromXML(xml, USD_XPATH);
     }
 
+    @Cacheable(value = "eur", unless = "#result == null or #result.isEmpty()")
     @Override
     public String getEURExchangeRate() throws ServiceException {
-        var xmlOptional= client.getCurrencyRatesXML();
-        String xml = xmlOptional.orElseThrow( ()->new ServiceException(" Не удалось получить XML"));
-        return extractCurrencyFromXML(xml,EUR_XPATH); // с помщью метода экстракт возвращаем значение из ноды
+        var xmlOptional = client.getCurrencyRatesXML();
+        String xml = xmlOptional.orElseThrow(() -> new ServiceException(" Не удалось получить XML"));
+        return extractCurrencyFromXML(xml, EUR_XPATH); // с помщью метода экстракт возвращаем значение из ноды
         // EUR PATH("/ValCurs//Valute[@ID='R01239']/Value";) из XML который был вытянут с сайта ЦБРФ с помощью CBRClienta
     }
 
@@ -55,12 +59,23 @@ public class ExchangeRatesServiceImpl implements ExchangeRatesService {
         try {
             var xpath = XPathFactory.newInstance().newXPath();// https://ru.wikipedia.org/wiki/XPath по сути создаём формочку
             // для запрома на языке xpath
-            var document =(Document)  xpath.evaluate("/", source, XPathConstants.NODE); // получчаем конкретную ноду по запросу
+            var document = (Document) xpath.evaluate("/", source, XPathConstants.NODE); // получчаем конкретную ноду по запросу
             // который вставим "/ValCurs//Valute[@ID='R01239']/Value" из  XML
             //
             return xpath.evaluate(xpathExpression, document);
         } catch (XPathExpressionException e) {
             throw new ServiceException(" Не удалось распарсить XML", e);
         }
+    }
+    @CacheEvict("usd")
+    @Override
+    public void clearUSDCache() {
+        LOG.info("Cache \"usd\" cleared!");
+    }
+
+    @CacheEvict("eur")
+    @Override
+    public void clearEURCache() {
+        LOG.info("Cache \"eur\" cleared!");
     }
 }

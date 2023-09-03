@@ -22,9 +22,11 @@ import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 import ru.kiraell.Kiraell_Monatna_bot.bot.commands.ExcRatesBotCommands;
 import ru.kiraell.Kiraell_Monatna_bot.exception.ServiceException;
+import ru.kiraell.Kiraell_Monatna_bot.models.TelegramUser;
 import ru.kiraell.Kiraell_Monatna_bot.service.ExchangeRatesService;
 import ru.kiraell.Kiraell_Monatna_bot.service.FolderUrlCollector;
 import ru.kiraell.Kiraell_Monatna_bot.service.Randomizer;
+import ru.kiraell.Kiraell_Monatna_bot.service.TelegramUserService;
 
 
 import java.io.File;
@@ -36,6 +38,7 @@ import java.time.LocalDate;
 
 @Component
 public class ExchangeRatesBot extends TelegramLongPollingBot {
+
     @Value("${img.path}")
     String imgPath;
     @Value("${music_Folder.path}")
@@ -58,6 +61,8 @@ public class ExchangeRatesBot extends TelegramLongPollingBot {
     private Randomizer randomizer;
     @Autowired
     ExcRatesBotCommands excRatesBotCommands;
+    @Autowired
+    TelegramUserService telegramUserService;
 
     public ExchangeRatesBot(@Value("${bot.token}") String botToken) {
         super(botToken);
@@ -75,8 +80,10 @@ public class ExchangeRatesBot extends TelegramLongPollingBot {
             case START -> {
                 String userName = update.getMessage().getChat().getUserName();
                 startCommand(chatId, userName);
+                telegramUserService.create(new TelegramUser(chatId, nameOfUser, 0.0F, 0.0F));
+
             }
-            case MUSIC -> sendMusic(chatId,nameOfUser);
+            case MUSIC -> sendMusic(chatId, nameOfUser);
             case PICTURE -> sendPicture(chatId, nameOfUser);
             case USD -> usdCommand(chatId);
             case EUR -> eurCommand(chatId);
@@ -103,7 +110,7 @@ public class ExchangeRatesBot extends TelegramLongPollingBot {
                 /eur - курс евро
                           
                 /picture случайная картинка из библиотеки       
-                
+                                
                 /music случайная композиция
                                 
                 Дополнительные команды:
@@ -130,10 +137,7 @@ public class ExchangeRatesBot extends TelegramLongPollingBot {
 
     public void eurCommand(Long chatId) {
         String formattedText;
-
         try {
-
-
             var eur = exchangeRatesService.getEURExchangeRate();
             var text = "Курс доллара на %s составляет %s рублей";
             formattedText = String.format(text, LocalDate.now(), eur);
@@ -172,31 +176,35 @@ public class ExchangeRatesBot extends TelegramLongPollingBot {
     private void sendPicture(Long chatId, String name) {
         System.out.println(name);
         System.out.println(imgPath);
-        String secondPartOfUrl =randomizer.getRandomFileUrl(folderUrlCollector.getFolderUrls(picturesPath));
+        System.out.println(chatId);
+        String secondPartOfUrl = randomizer.getRandomFileUrl(folderUrlCollector.getFolderUrls(picturesPath));
 
         SendPhoto sendPhoto = SendPhoto.builder()
                 .chatId(chatId)
                 //.caption(secondPartOfUrl) просто название картинки не является необходимым
                 .parseMode(ParseMode.HTML)
-                .photo(new InputFile(new File(picturesPath+"//"+secondPartOfUrl))).build();// из рандомайзера берём часть которую добавляем к пути
+                .photo(new InputFile(new File(picturesPath + "//" + secondPartOfUrl))).build();// из рандомайзера берём часть которую добавляем к пути
         try {
             execute(sendPhoto);
         } catch (TelegramApiException e) {
+            LOG.error("Ошибка вывода картинки", e);
             throw new RuntimeException(e);
         }
     }
-    private void sendMusic(Long chatId, String name){
 
-        String secondPartOfUrl =randomizer.getRandomFileUrl(folderUrlCollector.getFolderUrls(musicPath));
-        SendAudio sendAudio=new SendAudio();
-        sendAudio.setAudio(new InputFile(new File(musicPath+"//"+secondPartOfUrl)));
+    private void sendMusic(Long chatId, String name) {
+
+        String secondPartOfUrl = randomizer.getRandomFileUrl(folderUrlCollector.getFolderUrls(musicPath));
+        SendAudio sendAudio = new SendAudio();
+        sendAudio.setAudio(new InputFile(new File(musicPath + "//" + secondPartOfUrl)));
         sendAudio.setChatId(chatId);
-        sendAudio.setCaption(name+" Держи песенку");
+        sendAudio.setCaption(name + " Держи песенку");
 
         try {
             execute(sendAudio);
         } catch (TelegramApiException e) {
             LOG.error("Ошибка отправки Аудио", e);
+            throw new RuntimeException(e);
         }
     }
 
@@ -207,6 +215,7 @@ public class ExchangeRatesBot extends TelegramLongPollingBot {
             execute(sendMessage);
         } catch (TelegramApiException e) {
             LOG.error("Ошибка отправки сообщенияь", e);
+            throw new RuntimeException(e);
         }
     }
 }

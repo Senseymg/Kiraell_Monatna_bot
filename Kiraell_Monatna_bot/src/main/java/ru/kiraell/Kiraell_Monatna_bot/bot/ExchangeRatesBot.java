@@ -48,7 +48,7 @@ public class ExchangeRatesBot extends TelegramLongPollingBot {
     private static final String USD = "/usd";
     private static final String EUR = "/eur";
     private static final String HELP = "/help";
-    private static final String PICTURE = "/photo";
+    private static final String PICTURE = "/picture";
     private static final String MUSIC = "/music";
     @Autowired
     private ExchangeRatesService exchangeRatesService;
@@ -155,7 +155,7 @@ public class ExchangeRatesBot extends TelegramLongPollingBot {
                  
                  /eur - курс евро
                  
-                 /photo случайная картинка из библиотеки     
+                 /picture случайная картинка из библиотеки     
                  
                  /music случайная композиция
                     

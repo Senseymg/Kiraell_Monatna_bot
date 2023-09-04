@@ -1,8 +1,3 @@
-/*bot.token=6573975242:AAFahNqwORuF1THAUr2Y9YSgJYoxQ0lIXqU
-        cbr.currency.rates.xml.url=http://www.cbr.ru/scripts/XML_daily.asp
-        img.path=F://Java//JavaIdeaWs//Kiraell_Monatna_bot//Kiraell_Monatna_bot//src//main//resources//photo.jpg*/
-
-
 package ru.kiraell.Kiraell_Monatna_bot.bot;
 
 import org.slf4j.Logger;
@@ -28,7 +23,6 @@ import ru.kiraell.Kiraell_Monatna_bot.service.FolderUrlCollector;
 import ru.kiraell.Kiraell_Monatna_bot.service.Randomizer;
 import ru.kiraell.Kiraell_Monatna_bot.service.TelegramUserService;
 
-
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -38,14 +32,12 @@ import java.time.LocalDate;
 
 @Component
 public class ExchangeRatesBot extends TelegramLongPollingBot {
-
     @Value("${img.path}")
     String imgPath;
     @Value("${music_Folder.path}")
     String musicPath;
     @Value("${img_folder.path}")
     String picturesPath;
-
     private static final Logger LOG = LoggerFactory.getLogger(ExchangeRatesBot.class);
     private static final String START = "/start";
     private static final String USD = "/usd";
@@ -81,15 +73,17 @@ public class ExchangeRatesBot extends TelegramLongPollingBot {
                 String userName = update.getMessage().getChat().getUserName();
                 startCommand(chatId, userName);
                 telegramUserService.create(new TelegramUser(chatId, nameOfUser, 0.0F, 0.0F));
-
             }
             case MUSIC -> sendMusic(chatId, nameOfUser);
             case PICTURE -> sendPicture(chatId, nameOfUser);
-            case USD -> usdCommand(chatId);
-            case EUR -> eurCommand(chatId);
-            case HELP -> helpCommand(chatId);
-            default -> unknownCommand(chatId);
+            case USD -> usdCommand(chatId,nameOfUser); //usdCommand(chatId);
+            case EUR -> eurCommand(chatId,nameOfUser);//eurCommand(chatId);
+            case HELP -> {
 
+                helpCommand(chatId,nameOfUser);
+                telegramUserService.checker(chatId,nameOfUser);//helpCommand(chatId);
+                System.out.println(nameOfUser);} //удали это
+            default -> unknownCommand(chatId);
         }
     }
 
@@ -121,12 +115,14 @@ public class ExchangeRatesBot extends TelegramLongPollingBot {
         sendMessage(chatId, formattedText);
     }
 
-    public void usdCommand(Long chatId) {
+    public void usdCommand(Long chatId,String userName) {//usdCommand(Long chatId)
+        telegramUserService.checker(chatId,userName); //временна приблуда чтобы добавть тех кто был до базы
         String formattedText;
         try {
             var usd = exchangeRatesService.getUSDExchangeRate();
-            var text = "Курс доллара на %s составляет %s рублей";
-            formattedText = String.format(text, LocalDate.now(), usd);
+            float tmpUsdDiff = telegramUserService.updateUSD(telegramUserService.read(chatId), usd);
+            var text = "Курс доллара на %s составляет %s рублей, разница с прошлым запросом %.2f";
+            formattedText = String.format(text, LocalDate.now(), usd, tmpUsdDiff);
             System.out.println("is chat id changed for a day or static?" + chatId + " время " + new Timestamp(System.currentTimeMillis()) + " form USD");
         } catch (ServiceException e) {
             LOG.error("Ошибка получения курса доллара", e);
@@ -135,12 +131,14 @@ public class ExchangeRatesBot extends TelegramLongPollingBot {
         sendMessage(chatId, formattedText);
     }
 
-    public void eurCommand(Long chatId) {
+    public void eurCommand(Long chatId,String userName) { //eurCommand(Long chatId)
+        telegramUserService.checker(chatId,userName); //временна приблуда чтобы добавть тех кто был до базы
         String formattedText;
         try {
             var eur = exchangeRatesService.getEURExchangeRate();
-            var text = "Курс доллара на %s составляет %s рублей";
-            formattedText = String.format(text, LocalDate.now(), eur);
+            float tmpEurDiff = telegramUserService.updateEUR(telegramUserService.read(chatId), eur);
+            var text = "Курс евро на %s составляет %s рублей, разница с прошлым запросом %.2f";
+            formattedText = String.format(text, LocalDate.now(),eur, tmpEurDiff);
             System.out.println("is chat id changed for a day or static?" + chatId + " время " + new Timestamp(System.currentTimeMillis()) + " form EUR");
         } catch (ServiceException e) {
             LOG.error("Ошибка получения курса евро", e);
@@ -149,7 +147,7 @@ public class ExchangeRatesBot extends TelegramLongPollingBot {
         sendMessage(chatId, formattedText);
     }
 
-    public void helpCommand(Long chatId) {
+    public void helpCommand(Long chatId,String userName) {//helpCommand(Long chatId)
         var text = """
                 справочная информация по боту
                                
@@ -165,6 +163,7 @@ public class ExchangeRatesBot extends TelegramLongPollingBot {
                     
                  """;
         sendMessage(chatId, text);
+
     }
 
     private void unknownCommand(Long chatId) {
@@ -174,11 +173,11 @@ public class ExchangeRatesBot extends TelegramLongPollingBot {
     }
 
     private void sendPicture(Long chatId, String name) {
+        telegramUserService.checker(chatId,name); //временна приблуда чтобы добавть тех кто был до базы
         System.out.println(name);
         System.out.println(imgPath);
         System.out.println(chatId);
         String secondPartOfUrl = randomizer.getRandomFileUrl(folderUrlCollector.getFolderUrls(picturesPath));
-
         SendPhoto sendPhoto = SendPhoto.builder()
                 .chatId(chatId)
                 //.caption(secondPartOfUrl) просто название картинки не является необходимым
@@ -193,13 +192,12 @@ public class ExchangeRatesBot extends TelegramLongPollingBot {
     }
 
     private void sendMusic(Long chatId, String name) {
-
+        telegramUserService.checker(chatId,name); //временна приблуда чтобы добавть тех кто был до базы
         String secondPartOfUrl = randomizer.getRandomFileUrl(folderUrlCollector.getFolderUrls(musicPath));
         SendAudio sendAudio = new SendAudio();
         sendAudio.setAudio(new InputFile(new File(musicPath + "//" + secondPartOfUrl)));
         sendAudio.setChatId(chatId);
         sendAudio.setCaption(name + " Держи песенку");
-
         try {
             execute(sendAudio);
         } catch (TelegramApiException e) {

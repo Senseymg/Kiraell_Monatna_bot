@@ -10,4 +10,8 @@ public interface TelegramUserService {
     TelegramUser read(Long id);
     boolean update(TelegramUser telegramUser,Long id);
     boolean delete(Long id);
+    float updateUSD(TelegramUser telegramUser,String usdValue);
+    float updateEUR(TelegramUser telegramUser,String eurValue);
+    void checker(Long id,String userName);
+
 }

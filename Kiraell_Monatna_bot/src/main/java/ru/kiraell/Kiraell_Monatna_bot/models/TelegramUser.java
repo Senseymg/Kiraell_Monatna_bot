@@ -8,6 +8,7 @@ import jakarta.persistence.Table;
 
 @Entity
 @Table(name = "telegramUsers")
+
 public class TelegramUser {
     @Id
     @Column(name = "id")
